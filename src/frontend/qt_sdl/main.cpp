@@ -49,7 +49,9 @@
 
 #include "NDS.h"
 #include "GBACart.h"
+#ifdef OGLRENDERER_ENABLED
 #include "OpenGLSupport.h"
+#endif
 #include "GPU.h"
 #include "SPU.h"
 #include "Wifi.h"
@@ -113,7 +115,6 @@ void audioCallback(void* data, Uint8* stream, int len)
     if (num_in < len_in-margin)
     {
         int last = num_in-1;
-        if (last < 0) last = 0;
 
         for (int i = num_in; i < len_in-margin; i++)
             ((u32*)buf_in)[i] = ((u32*)buf_in)[last];
@@ -336,13 +337,17 @@ void EmuThread::run()
     videoSettings.Soft_Threaded = Config::Threaded3D != 0;
     videoSettings.GL_ScaleFactor = Config::GL_ScaleFactor;
 
+#ifdef OGLRENDERER_ENABLED
     if (hasOGL)
     {
         oglContext->makeCurrent(oglSurface);
         videoRenderer = OpenGL::Init() ? Config::_3DRenderer : 0;
     }
     else
+#endif
+    {
         videoRenderer = 0;
+    }
 
     GPU::InitRenderer(videoRenderer);
     GPU::SetRenderSettings(videoRenderer, videoSettings);
@@ -396,13 +401,17 @@ void EmuThread::run()
                 if (hasOGL != mainWindow->hasOGL)
                 {
                     hasOGL = mainWindow->hasOGL;
+#ifdef OGLRENDERER_ENABLED
                     if (hasOGL)
                     {
                         oglContext->makeCurrent(oglSurface);
                         videoRenderer = OpenGL::Init() ? Config::_3DRenderer : 0;
                     }
                     else
+#endif
+                    {
                         videoRenderer = 0;
+                    }
                 }
                 else
                     videoRenderer = hasOGL ? Config::_3DRenderer : 0;
@@ -923,12 +932,14 @@ void ScreenPanelGL::paintGL()
     int frontbuf = GPU::FrontBuffer;
     glActiveTexture(GL_TEXTURE0);
 
+#ifdef OGLRENDERER_ENABLED
     if (GPU::Renderer != 0)
     {
         // hardware-accelerated render
         GPU::GLCompositor::BindOutputTexture();
     }
     else
+#endif
     {
         // regular render
         glBindTexture(GL_TEXTURE_2D, screenTexture);
@@ -1051,6 +1062,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
         actUndoStateLoad = menu->addAction("Undo state load");
         actUndoStateLoad->setShortcut(QKeySequence(Qt::Key_F12));
         connect(actUndoStateLoad, &QAction::triggered, this, &MainWindow::onUndoStateLoad);
+
+        actImportSavefile = menu->addAction("Import savefile");
+        connect(actImportSavefile, &QAction::triggered, this, &MainWindow::onImportSavefile);
 
         menu->addSeparator();
 
@@ -1220,6 +1234,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
         actLoadState[i]->setEnabled(false);
     }
     actUndoStateLoad->setEnabled(false);
+    actImportSavefile->setEnabled(false);
 
     actPause->setEnabled(false);
     actReset->setEnabled(false);
@@ -1618,6 +1633,41 @@ void MainWindow::onUndoStateLoad()
     OSD::AddMessage(0, "State load undone");
 }
 
+void MainWindow::onImportSavefile()
+{
+    if (!RunningSomething) return;
+
+    emuThread->emuPause();
+    QString path = QFileDialog::getOpenFileName(this,
+                                            "Select savefile",
+                                            Config::LastROMFolder,
+                                            "Savefiles (*.sav *.bin *.dsv);;Any file (*.*)");
+
+    if (!path.isEmpty())
+    {
+        if (QMessageBox::warning(this,
+                        "Emulation will be reset and data overwritten",
+                        "The emulation will be reset and the current savefile overwritten.",
+                        QMessageBox::Ok, QMessageBox::Cancel) == QMessageBox::Ok)
+        {
+            int res = Frontend::Reset();
+            if (res != Frontend::Load_OK)
+            {
+                QMessageBox::critical(this, "melonDS", "Reset failed\n" + loadErrorStr(res));
+            }
+            else
+            {
+                int diff = Frontend::ImportSRAM(path.toStdString().c_str());
+                if (diff > 0)
+                    OSD::AddMessage(0, "Trimmed savefile");
+                else if (diff < 0)
+                    OSD::AddMessage(0, "Savefile shorter than SRAM");
+            }
+        }
+    }
+    emuThread->emuUnpause();
+}
+
 void MainWindow::onQuit()
 {
     QApplication::quit();
@@ -1923,6 +1973,7 @@ void MainWindow::onEmuStart()
     actPause->setChecked(false);
     actReset->setEnabled(true);
     actStop->setEnabled(true);
+    actImportSavefile->setEnabled(true);
 
     actSetupCheats->setEnabled(true);
 }
@@ -1937,6 +1988,7 @@ void MainWindow::onEmuStop()
         actLoadState[i]->setEnabled(false);
     }
     actUndoStateLoad->setEnabled(false);
+    actImportSavefile->setEnabled(false);
 
     actPause->setEnabled(false);
     actReset->setEnabled(false);

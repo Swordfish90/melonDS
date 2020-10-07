@@ -312,7 +312,6 @@ void DeInitRenderer()
 #endif
         GPU3D::SoftRenderer::DeInit();
 #ifdef HAVE_OPENGL
-    }
     else
     {
         GPU3D::GLRenderer::DeInit();

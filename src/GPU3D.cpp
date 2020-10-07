@@ -2539,6 +2539,7 @@ u32* GetLine(int line)
 #ifdef HAVE_OPENGL
     else               return GLRenderer::GetLine(line);
 #endif
+    return NULL;
 }
 
 
