@@ -560,7 +560,7 @@ bool retro_load_game(const struct retro_game_info *info)
    // Abort if there are any of the required roms are missing
    if(!missing_roms.empty())
    {
-      std::string msg = "Missing required bios/firmware in system directory: ";
+      std::string msg = "Missing bios/firmware in system directory. Using FreeBIOS.";
 
       int i = 0;
       int len = missing_roms.size();
@@ -573,9 +573,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
       msg.append("\n");
 
-      log_cb(RETRO_LOG_ERROR, msg.c_str());
-
-      return false;
+      log_cb(RETRO_LOG_INFO, msg.c_str());
    }
 
    strcpy(Config::BIOS7Path, "bios7.bin");
