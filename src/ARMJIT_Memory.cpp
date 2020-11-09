@@ -10,10 +10,6 @@
 #include <signal.h>
 #endif
 
-#if defined(__ANDROID__)
-#include <dlfcn.h>
-#endif
-
 #include "ARMJIT_Memory.h"
 
 #include "ARMJIT_Internal.h"
@@ -633,23 +629,8 @@ void Init()
 
     MemoryBase = (u8*)mmap(NULL, MemoryTotalSize, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
-#if defined (__ANDROID__)
-    // TODO FILIPPO. Handle API < 27.
-    static void* handle = dlopen("libandroid.so", RTLD_LAZY | RTLD_LOCAL);
-    using type_ASharedMemory_create = int(*)(const char *name, size_t size);
-    static type_ASharedMemory_create function_create = nullptr;
-
-    if (handle != nullptr) {
-        function_create = reinterpret_cast<type_ASharedMemory_create>(dlsym(handle, "ASharedMemory_create"));
-    }
-
-    if (function_create != nullptr) {
-        MemoryFile = function_create("melondsfastmem", MemoryTotalSize);
-    }
-#else
     MemoryFile = memfd_create("melondsfastmem", 0);
     ftruncate(MemoryFile, MemoryTotalSize);
-#endif
 
     NewSa.sa_flags = SA_SIGINFO;
     sigemptyset(&NewSa.sa_mask);
