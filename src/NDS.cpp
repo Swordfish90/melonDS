@@ -2998,6 +2998,7 @@ u32 ARM9IORead32(u32 addr)
     case 0x04000130: return (KeyInput & 0xFFFF) | (KeyCnt << 16);
 
     case 0x04000180: return IPCSync9;
+    case 0x04000184: return ARM9IORead16(addr);
 
     case 0x040001A0: return NDSCart::SPICnt | (NDSCart::ReadSPIData() << 16);
     case 0x040001A4: return NDSCart::ROMCnt;
@@ -3110,6 +3111,10 @@ void ARM9IOWrite8(u32 addr, u8 val)
         return;
     case 0x040001A2:
         NDSCart::WriteSPIData(val);
+        return;
+
+    case 0x04000188:
+        ARM9IOWrite32(addr, val | (val << 8) | (val << 16) | (val << 24));
         return;
 
     case 0x040001A8: NDSCart::ROMCommand[0] = val; return;
@@ -3226,6 +3231,10 @@ void ARM9IOWrite16(u32 addr, u16 val)
         if (val & 0x4000)
             IPCFIFOCnt9 &= ~0x4000;
         IPCFIFOCnt9 = val & 0x8404;
+        return;
+
+    case 0x04000188:
+        ARM9IOWrite32(addr, val | (val << 16)); 
         return;
 
     case 0x040001A0:
@@ -3375,10 +3384,11 @@ void ARM9IOWrite32(u32 addr, u32 val)
     case 0x04000130:
         KeyCnt = val >> 16;
         return;
+
     case 0x04000180:
+    case 0x04000184:
         ARM9IOWrite16(addr, val);
         return;
-
     case 0x04000188:
         if (IPCFIFOCnt9 & 0x8000)
         {
@@ -3637,6 +3647,7 @@ u32 ARM7IORead32(u32 addr)
     case 0x04000138: return RTC::Read();
 
     case 0x04000180: return IPCSync7;
+    case 0x04000184: return ARM7IORead16(addr);
 
     case 0x040001A0: return NDSCart::SPICnt | (NDSCart::ReadSPIData() << 16);
     case 0x040001A4: return NDSCart::ROMCnt;
@@ -3712,6 +3723,10 @@ void ARM7IOWrite8(u32 addr, u8 val)
         return;
 
     case 0x04000138: RTC::Write(val, true); return;
+
+    case 0x04000188:
+        ARM7IOWrite32(addr, val | (val << 8) | (val << 16) | (val << 24));
+        return;
 
     case 0x040001A0:
         if (ExMemCnt[0] & (1<<11))
@@ -3819,6 +3834,10 @@ void ARM7IOWrite16(u32 addr, u16 val)
         if (val & 0x4000)
             IPCFIFOCnt7 &= ~0x4000;
         IPCFIFOCnt7 = val & 0x8404;
+        return;
+
+    case 0x04000188:
+        ARM7IOWrite32(addr, val | (val << 16));
         return;
 
     case 0x040001A0:
@@ -3937,6 +3956,7 @@ void ARM7IOWrite32(u32 addr, u32 val)
     case 0x04000138: RTC::Write(val & 0xFFFF, false); return;
 
     case 0x04000180:
+    case 0x04000184:
         ARM7IOWrite16(addr, val);
         return;
     case 0x04000188:
@@ -3980,6 +4000,11 @@ void ARM7IOWrite32(u32 addr, u32 val)
 
     case 0x040001B0: *(u32*)&ROMSeed0[8] = val; return;
     case 0x040001B4: *(u32*)&ROMSeed1[8] = val; return;
+
+    case 0x040001C0:
+        SPI::WriteCnt(val & 0xFFFF);
+        SPI::WriteData((val >> 16) & 0xFF);
+        return;
 
     case 0x04000208: IME[1] = val & 0x1; UpdateIRQ(1); return;
     case 0x04000210: IE[1] = val; UpdateIRQ(1); return;
