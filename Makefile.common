@@ -68,7 +68,7 @@ SOURCES_CXX +=  $(MELON_DIR)/GPU_OpenGL.cpp \
                 $(MELON_DIR)/OpenGLSupport.cpp \
                 $(CORE_DIR)/opengl.cpp
 
-DEFINES += -DHAVE_OPENGL -DCORE
+DEFINES += -DHAVE_OPENGL -DOGLRENDERER_ENABLED -DCORE
 endif
 
 ifeq ($(HAVE_THREADS), 1)

@@ -997,6 +997,8 @@ u32 RunFrame()
            GPU3D::Timestamp-SysTimestamp);
 #endif
 
+    NDSCart::FlushSRAMFile();
+
     NumFrames++;
 
     return GPU::TotalScanlines;
